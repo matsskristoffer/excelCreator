@@ -2,8 +2,8 @@ package org.disK.excelcreator;
 
 import static org.disK.excelcreator.ExcelUtilities.getRowOfData;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import lombok.SneakyThrows;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.disK.excelcreator.ExcelUtilities.RowAndCellAddress;
 
@@ -39,7 +38,6 @@ public class CreateDataObjectFromExcel {
   }
 
 
-  @SneakyThrows
   public <T> List<T> createListOfObjectsFromExcelSheet(final Class<?> clazz, final XSSFSheet sheet, List<Field> fields, ObjectMapper mapper) {
 
     var rowsFromSheet = ExcelReader.getRowsFromSheet(sheet).stream().filter(Objects::nonNull).toList();
@@ -81,7 +79,6 @@ public class CreateDataObjectFromExcel {
     }
   }
 
-  @SneakyThrows
   private static <T> List<T> mapToObject(List<Map<String, Object>> list, Class<?> clazz, ObjectMapper mapper) {
 
     if (mapper == null) {
@@ -91,14 +88,19 @@ public class CreateDataObjectFromExcel {
     List<T> arrayList = new ArrayList<>();
     for (Map<String, Object> map : list) {
 
-      String s = mapper.writeValueAsString(map);
+      String s = null;
+      try {
+        s = mapper.writeValueAsString(map);
+      } catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
       try {
         Object o = mapper.readValue(s, clazz);
         if (o.getClass().isAssignableFrom(clazz)) {
           T osas = (T) o;
           arrayList.add(osas);
         }
-      } catch (MismatchedInputException mismatchedInputException) {
+      } catch (JsonProcessingException mismatchedInputException) {
         throw new IllegalArgumentException("Couldn't loop through this object:\n" + s + "\nException: " + mismatchedInputException);
       } catch (ClassCastException classCastException) {
         throw new IllegalArgumentException("Couldn't cast this object:\n" + s + "\nException: " + classCastException);
@@ -109,7 +111,6 @@ public class CreateDataObjectFromExcel {
 
   }
 
-  @SneakyThrows
   private <T> T getObject(Class<?> clazz,
       List<Field> fields,
       Map<String, Object> objectMap) {
