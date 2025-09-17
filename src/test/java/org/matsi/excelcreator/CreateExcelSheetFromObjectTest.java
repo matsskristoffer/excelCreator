@@ -1,7 +1,6 @@
-package org.disK.excelcreator;
+package org.matsi.excelcreator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.disK.excelcreator.ExcelReader.getSheets;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -12,13 +11,14 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.junit.Test;
+import org.matsi.excelcreator.Reflection.GetFieldFromClass;
 
 public class CreateExcelSheetFromObjectTest {
 
   @Test
   public void checkObjectAgainstExcel() throws IOException {
 
-    var sheets = getSheets(FileReader.readFromFile("TestObject.xlsx"));
+    var sheets = new ExcelReader().getSheets(FileReader.readFromFile("TestObject.xlsx"));
 
     List<Field> fields = new GetFieldFromClass(TestObject.class, null)
         .getFields();
@@ -51,7 +51,7 @@ public class CreateExcelSheetFromObjectTest {
     CreateExcelWithData hello = new CreateExcelWithData(Map.of("hello", List.of(testObject)),
                                                         new ObjectMapper());
 
-    var sheets = getSheets(FileReader.readFromFile("TestObject.xlsx"));
+    var sheets = new ExcelReader().getSheets(FileReader.readFromFile("TestObject.xlsx"));
 
     XSSFSheet hello1 = hello.getXssfWorkbook().getSheet("hello");
 

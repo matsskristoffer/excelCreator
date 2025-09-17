@@ -1,6 +1,6 @@
-package org.disK.excelcreator;
+package org.matsi.excelcreator;
 
-import static org.disK.excelcreator.ExcelUtilities.getRowOfData;
+import static org.matsi.excelcreator.ExcelUtilities.getRowOfDataAsStrings;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,12 +14,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.disK.excelcreator.ExcelUtilities.RowAndCellAddress;
+import org.matsi.excelcreator.ExcelUtilities.RowAndCellAddress;
+import org.matsi.excelcreator.Reflection.GetFieldFromClass;
+import org.matsi.excelcreator.Reflection.Reflection;
 
 public class CreateDataObjectFromExcel {
 
 
-  public <T> List<T> createListOfObjectsFromExcelSheet(final Class<?> clazz, final XSSFSheet sheet) {
+  public <T> List<T> createListOfObjectsFromExcelSheet(final Class<T> clazz, final XSSFSheet sheet) {
 
     return createListOfObjectsFromExcelSheet(clazz,
                                              sheet,
@@ -28,7 +30,7 @@ public class CreateDataObjectFromExcel {
 
   }
 
-  public <T> List<T> createListOfObjectsFromExcelSheet(final Class<?> clazz, final XSSFSheet sheet, List<Field> fields) {
+  public <T> List<T> createListOfObjectsFromExcelSheet(final Class<T> clazz, final XSSFSheet sheet, List<Field> fields) {
 
     return createListOfObjectsFromExcelSheet(clazz,
                                              sheet,
@@ -38,7 +40,7 @@ public class CreateDataObjectFromExcel {
   }
 
 
-  public <T> List<T> createListOfObjectsFromExcelSheet(final Class<?> clazz, final XSSFSheet sheet, List<Field> fields, ObjectMapper mapper) {
+  public <T> List<T> createListOfObjectsFromExcelSheet(final Class<T> clazz, final XSSFSheet sheet, List<Field> fields, ObjectMapper mapper) {
 
     var rowsFromSheet = ExcelReader.getRowsFromSheet(sheet).stream().filter(Objects::nonNull).toList();
 
@@ -61,17 +63,17 @@ public class CreateDataObjectFromExcel {
     if (mapper == null) {
 
       return rowsWithData.stream()
-          .map(row -> getRowOfData(row, lastCellNum))
+          .map(row -> getRowOfDataAsStrings(row, lastCellNum))
           .map(row -> getObjectMap(fields, row, fieldNamesFromExcel))
           .map(row -> getObject(clazz, fields, row))
           .filter(row -> row.getClass().isAssignableFrom(clazz))
-          .map(row -> (T) row)
+          .map(clazz::cast)
           .toList();
 
     } else {
 
       return mapToObject(rowsWithData.stream()
-                             .map(row -> getRowOfData(row, lastCellNum))
+                             .map(row -> getRowOfDataAsStrings(row, lastCellNum))
                              .map(row -> getObjectMap(fields, row, fieldNamesFromExcel))
                              .toList(),
                          clazz,
@@ -79,7 +81,7 @@ public class CreateDataObjectFromExcel {
     }
   }
 
-  private static <T> List<T> mapToObject(List<Map<String, Object>> list, Class<?> clazz, ObjectMapper mapper) {
+  private static <T> List<T> mapToObject(List<Map<String, Object>> list, Class<T> clazz, ObjectMapper mapper) {
 
     if (mapper == null) {
       mapper = new ObjectMapper();
@@ -88,7 +90,7 @@ public class CreateDataObjectFromExcel {
     List<T> arrayList = new ArrayList<>();
     for (Map<String, Object> map : list) {
 
-      String s = null;
+      String s;
       try {
         s = mapper.writeValueAsString(map);
       } catch (JsonProcessingException e) {
@@ -97,8 +99,7 @@ public class CreateDataObjectFromExcel {
       try {
         Object o = mapper.readValue(s, clazz);
         if (o.getClass().isAssignableFrom(clazz)) {
-          T osas = (T) o;
-          arrayList.add(osas);
+          arrayList.add(clazz.cast(o));
         }
       } catch (JsonProcessingException mismatchedInputException) {
         throw new IllegalArgumentException("Couldn't loop through this object:\n" + s + "\nException: " + mismatchedInputException);
@@ -111,7 +112,7 @@ public class CreateDataObjectFromExcel {
 
   }
 
-  private <T> T getObject(Class<?> clazz,
+  private <T> T getObject(Class<T> clazz,
       List<Field> fields,
       Map<String, Object> objectMap) {
 
@@ -129,7 +130,7 @@ public class CreateDataObjectFromExcel {
       }
 
       try {
-        return (T) clazz.cast(object);
+        return clazz.cast(object);
       } catch (ClassCastException classCastException) {
         throw new IllegalArgumentException(classCastException);
       }

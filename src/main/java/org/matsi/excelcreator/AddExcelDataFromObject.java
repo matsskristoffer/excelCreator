@@ -1,6 +1,6 @@
-package org.disK.excelcreator;
+package org.matsi.excelcreator;
 
-import static org.disK.excelcreator.GetCellAddress.findColumnPosition;
+import static org.matsi.excelcreator.ExcelUtilities.findColumnPosition;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -10,31 +10,37 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellAddress;
+import org.matsi.excelcreator.Reflection.GetFieldFromClass;
+import org.slf4j.LoggerFactory;
 
-public class CreateExcelSheetFromObject {
+public final class AddExcelDataFromObject {
 
+  private static final Pattern PATTERN = Pattern.compile("(?<=\\G.{" + 32767 + "})");
   private final ObjectMapper mapper;
   private final CellStyle headerStyle;
-  private final Class<?> clazz;
-  private final List<String> fields;
 
-  public CreateExcelSheetFromObject(ObjectMapper mapper, CellStyle headerStyle, Class<?> clazz) {
+  public AddExcelDataFromObject(ObjectMapper mapper, CellStyle headerStyle) {
     this.mapper = mapper;
     this.headerStyle = headerStyle;
-    this.clazz = clazz;
-    fields = new GetFieldFromClass(this.clazz, null)
-        .getFields()
-        .stream()
-        .map(Field::getName)
-        .toList();
   }
 
   public void addDataToSheet(List<?> entries, Sheet sheet) throws IllegalStateException {
+
+    Class<?> clazz = entries.getFirst().getClass();
+
+    List<String> fields = new GetFieldFromClass(clazz, null)
+        .getFields()
+        .stream()
+        .map(Field::getName)
+        .filter(s -> !s.toLowerCase().contains("companion"))
+        .toList();
 
     if (entries.isEmpty()) {
       throw new IllegalStateException("List sent in was empty!");
@@ -51,7 +57,7 @@ public class CreateExcelSheetFromObject {
     int i = indexRow.getRowNum() + 1;
     for (Object entry : entries) {
       try {
-        String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(entry);
+        String json = mapper.writeValueAsString(entry);
         Map<String, Object> hashmapWithData = mapper.readValue(json, typeRef);
         if (hashmapWithData != null) {
           Row dataRow = sheet.createRow(i);
@@ -73,11 +79,13 @@ public class CreateExcelSheetFromObject {
 
       CellAddress columnPosition = findColumnPosition(data.getKey(), indexRow, fields.size());
       if (columnPosition != null) {
-        String dataValue = data.getValue().toString();
+        // Supports null values
+        String dataValue = Optional.ofNullable(data.getValue()).orElse(" ").toString();
         if (dataValue.length() > 32767) {
           // If the value is too big for one cell, we'll just omit the rest of the value.
-          String[] splitString = dataValue.split("(?<=\\G.{" + 32767 + "})");
-          dataRow.createCell(columnPosition.getColumn()).setCellValue(splitString[0]);
+          String[] splitString = PATTERN.split(dataValue);
+          Cell cell = dataRow.createCell(columnPosition.getColumn());
+          cell.setCellValue(splitString[0]);
         } else {
           // Ugly empty array that we can skip and just replace with an empty String
           if (dataValue.equals("[]")) {
@@ -86,6 +94,8 @@ public class CreateExcelSheetFromObject {
             dataRow.createCell(columnPosition.getColumn()).setCellValue(dataValue);
           }
         }
+      } else {
+        LoggerFactory.getLogger(AddExcelDataFromObject.class).error("No value was found! key: {}", data.getKey());
       }
     }
   }

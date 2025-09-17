@@ -1,6 +1,8 @@
-package org.disK.excelcreator;
+package org.matsi.excelcreator;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -13,6 +15,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.matsi.excelcreator.Reflection.GetFieldFromClass;
 
 public class ExcelUtilities {
 
@@ -40,22 +43,68 @@ public class ExcelUtilities {
 
   }
 
-  // Could probably use equals to a predefined object, but this is quicker
-  public static boolean isMappableToClass(List<XSSFSheet> xssfSheets, Class<?> clazz) {
-    return ExcelReader.getRowsFromSheet(xssfSheets.getFirst()).stream().filter(Objects::nonNull).limit(10)
-        .anyMatch(s -> {
-          List<Field> list = new GetFieldFromClass(clazz, null).getFields();
-          return getRowOfData(s, list.size() - 1).stream().anyMatch(k -> list.stream().anyMatch(p -> p.getName().equals(k)));
-        });
-  }
-
   public static boolean cellHasANonEmptyValue(Cell cell) {
     return cell != null && !returnStringFromCell(cell).replace(" ", "").isEmpty();
   }
 
+  public static boolean isMappableToClass(List<XSSFSheet> xssfSheets, Class<?> clazz) {
+    return isMappableToClass(xssfSheets, clazz, null);
+  }
 
-  public static List<String> getRowOfData(Row row,
-      int endColumnIndex) {
+  // Could probably use equals to a predefined object, but this is quicker
+  public static boolean isMappableToClass(List<XSSFSheet> xssfSheets, Class<?> clazz, Class<? extends Annotation> annotationClass) {
+    boolean match = false;
+
+    List<String> list = new GetFieldFromClass(clazz).getStringsFromFieldNameOrAnnotationClass(annotationClass).stream().map(Field::getName).toList();
+
+    for (XSSFSheet sheet : xssfSheets) {
+      List<Row> rows = ExcelReader.getRowsFromSheet(sheet).stream().filter(Objects::nonNull)
+          .filter(s -> s.getLastCellNum() > 0)
+          .limit(15)
+          .toList();
+      if (rows
+          .stream()
+          .anyMatch(s -> getRowOfDataAsStrings(s, list.size() - 1)
+              .stream()
+              .anyMatch(k -> list.stream().anyMatch(p -> p.equalsIgnoreCase(k))))) {
+        match = true;
+        break;
+      }
+
+    }
+
+    return match;
+
+  }
+
+  public static List<XSSFSheet> getMatchingSheetsFromClass(List<XSSFSheet> xssfSheets, Class<?> clazz) {
+    return getMatchingSheetsFromClass(xssfSheets, clazz, null);
+  }
+
+  public static List<XSSFSheet> getMatchingSheetsFromClass(List<XSSFSheet> xssfSheets, Class<?> clazz, Class<? extends Annotation> annotationClass) {
+    List<String> list = new GetFieldFromClass(clazz).getStringsFromFieldNameOrAnnotationClass(annotationClass).stream().map(Field::getName).toList();
+
+    return xssfSheets.stream().filter(sheet -> ExcelReader.getRowsFromSheet(sheet).stream().filter(Objects::nonNull)
+            .limit(15)
+            .anyMatch(s -> getRowOfDataAsStrings(s, list.size() - 1)
+                .stream()
+                .anyMatch(k -> list.stream().anyMatch(p -> p.equalsIgnoreCase(k)))))
+        .toList();
+
+  }
+
+  public static List<Cell> getRowOfDataAsCells(Row row, int endColumnIndex) {
+    List<Cell> data = new ArrayList<>();
+    int i = 0;
+
+    while (i <= endColumnIndex) {
+      data.add(row.getCell(i));
+      i++;
+    }
+    return data;
+  }
+
+  public static List<String> getRowOfDataAsStrings(Row row, int endColumnIndex) {
 
     List<String> data = new ArrayList<>();
     int i = 0;
@@ -68,7 +117,21 @@ public class ExcelUtilities {
     return data;
   }
 
-  public static List<String> getRowOfData(List<Row> rows,
+  public static CellAddress findColumnPosition(String key, Row indexRow, int size) {
+    Cell cell = null;
+    int i = 0;
+    while (cell == null
+        || (cell.getAddress().getColumn() < indexRow.getLastCellNum() || cell.getAddress().getColumn() < size) && i < indexRow.getLastCellNum()) {
+      cell = indexRow.getCell(i);
+      if (cell != null && cell.getRichStringCellValue().toString().equals(key)) {
+        return cell.getAddress();
+      }
+      i++;
+    }
+    return null;
+  }
+
+  public static List<String> getRowOfDataAsStrings(List<Row> rows,
       RowAndCellAddress rowAndCellStartAddress,
       int endColumnIndex) {
 
@@ -184,7 +247,7 @@ public class ExcelUtilities {
         case NUMERIC -> {
           if (DateUtil.isCellDateFormatted(cell)) {
             // Save it in ISO 8601 standard
-            formatter.addFormat("m/d/yy", new java.text.SimpleDateFormat("yyyy-MM-dd"));
+            formatter.addFormat("m/d/yy", new SimpleDateFormat("yyyy-MM-dd"));
             return formatter.formatCellValue(transformedCell);
           } else {
             return formatter.formatCellValue(transformedCell);
