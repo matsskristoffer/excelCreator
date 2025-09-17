@@ -32,8 +32,6 @@ public class CreateExcelSheetFromObjectTest {
 
     Entry<String, List<TestObject>> testObjects = mapOfTestObjectFromExcel.entrySet().stream().toList().getFirst();
 
-    List<TestObject> value = testObjects.getValue();
-
     TestObject testObject = new TestObject("test", 1, "other", List.of("1", "2", "3", "4"));
 
     assertEquals(testObjects.getValue().getFirst(), testObject);
@@ -57,8 +55,8 @@ public class CreateExcelSheetFromObjectTest {
 
     XSSFSheet helloFromExcel = sheets.getFirst();
 
-    assertEquals(ExcelUtilities.getRowOfData(helloFromExcel.getRow(1), 3),
-                 ExcelUtilities.getRowOfData(hello1.getRow(1), 3));
+    assertEquals(ExcelUtilities.getRowOfDataAsStrings(helloFromExcel.getRow(1), 3),
+                 ExcelUtilities.getRowOfDataAsStrings(hello1.getRow(1), 3));
 
     List<TestObject> mapOfTestObjectFromExcel =
         new CreateDataObjectFromExcel().createListOfObjectsFromExcelSheet(TestObject.class,
