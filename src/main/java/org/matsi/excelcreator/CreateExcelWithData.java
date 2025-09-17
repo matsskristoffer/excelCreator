@@ -1,4 +1,4 @@
-package org.disK.excelcreator;
+package org.matsi.excelcreator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayOutputStream;

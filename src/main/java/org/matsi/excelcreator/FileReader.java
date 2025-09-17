@@ -1,4 +1,4 @@
-package org.disK.excelcreator;
+package org.matsi.excelcreator;
 
 import com.google.common.io.ByteStreams;
 import java.io.IOException;
