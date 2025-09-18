@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.matsi.excelcreator.ExcelUtilities.RowAndCellAddress;
 import org.matsi.excelcreator.Reflection.GetFieldFromClass;
@@ -47,36 +48,36 @@ public class CreateDataObjectFromExcel {
       ObjectMapper objectMapper) {
 
     return createListOfObjectsFromExcelSheet(clazz,
+                                             annotationClazz,
                                              sheet,
                                              new GetFieldFromClass(clazz, annotationClazz).getFields(),
                                              objectMapper);
   }
 
 
-  public <T> List<T> createListOfObjectsFromExcelSheet(final Class<T> clazz, final XSSFSheet sheet, List<Field> fields, ObjectMapper mapper) {
+  public <T> List<T> createListOfObjectsFromExcelSheet(final Class<T> clazz,
+      Class<? extends Annotation> annotationClazz,
+      final XSSFSheet sheet,
+      List<Field> fields,
+      ObjectMapper mapper) {
+
+    List<String> fieldNames = fields.stream().map(Field::getName).toList();
+
 
     var rowsFromSheet = ExcelReader.getRowsFromSheet(sheet).stream().filter(Objects::nonNull).toList();
+    var rowsWithData = getRowsWithData(rowsFromSheet, fieldNames);
 
-    var rowsWithData = rowsFromSheet.stream()
-        .skip(1)
-        .toList();
 
-    List<Field> matchingFieldsInExcel = fields.stream().filter(
-            field -> ExcelUtilities.getRowAndCellAddressForString(rowsFromSheet, field.getName()).isPresent())
-        .toList();
-
-    final RowAndCellAddress rowAndCellAddressForIndexData = ExcelUtilities
-        .getRowAndCellAddressForString(rowsFromSheet, matchingFieldsInExcel.get(matchingFieldsInExcel.size() - 1).getName())
-        .orElseThrow(() -> new IllegalArgumentException("Missing last column for object from sheet"));
-
-    short lastCellNum = rowAndCellAddressForIndexData.row().getLastCellNum();
+    List<Field> matchingFieldsInExcel = getFieldsMatchingClassOrAnnotation(annotationClazz, fields, rowsFromSheet);
+    final RowAndCellAddress rowAndCellAddressForIndexData = getRowAndCellAddress(rowsFromSheet,
+                                                                                 matchingFieldsInExcel, fieldNames);
 
     List<String> fieldNamesFromExcel = matchingFieldsInExcel.stream().map(Field::getName).toList();
 
     if (mapper == null) {
 
       return rowsWithData.stream()
-          .map(row -> getRowOfDataAsStrings(row, lastCellNum))
+          .map(row -> getRowOfDataAsStrings(row, rowAndCellAddressForIndexData.row().getLastCellNum()))
           .map(row -> getObjectMap(fields, row, fieldNamesFromExcel))
           .map(row -> getObject(clazz, fields, row))
           .filter(row -> row.getClass().isAssignableFrom(clazz))
@@ -86,12 +87,46 @@ public class CreateDataObjectFromExcel {
     } else {
 
       return mapToObject(rowsWithData.stream()
-                             .map(row -> getRowOfDataAsStrings(row, lastCellNum))
+                             .map(row -> getRowOfDataAsStrings(row, rowAndCellAddressForIndexData.row().getLastCellNum()))
                              .map(row -> getObjectMap(fields, row, fieldNamesFromExcel))
                              .toList(),
                          clazz,
                          mapper);
     }
+  }
+
+  private static RowAndCellAddress getRowAndCellAddress(List<Row> rowsFromSheet, List<Field> matchingFieldsInExcel, List<String> fieldNames) {
+    return ExcelUtilities
+        .getRowAndCellAddressForString(rowsFromSheet, matchingFieldsInExcel.stream()
+            .filter(field -> fieldNames.contains(field.getName())).findFirst()
+            .orElseThrow(() -> new IllegalStateException("Couldn't find a field matching from excel"))
+            .getName())
+        .orElseThrow(() -> new IllegalStateException("Missing last column for object from sheet"));
+  }
+
+  private static List<Row> getRowsWithData(List<Row> rowsFromSheet, List<String> fieldNames) {
+    // Will sort out all rows that have a matching field
+    // Will filter out rows that just have empty space.
+    return rowsFromSheet.stream()
+        .filter(row -> fieldNames.stream().noneMatch(fieldName -> ExcelUtilities.getRowOfDataAsStrings(row, row.getLastCellNum()).contains(fieldName)))
+        // Will filter out rows that just have empty space.
+        .filter(s -> ExcelUtilities.getCellValuesFromRow(s).stream().noneMatch(string -> string == null || string.equals(" ")))
+        .toList();
+  }
+
+  private static List<Field> getFieldsMatchingClassOrAnnotation(Class<? extends Annotation> annotationClass,
+      List<Field> fields,
+      List<Row> rowsFromSheet) {
+    return fields.stream().filter(
+            field -> {
+              Optional<RowAndCellAddress> rowAndCellAddressForString = ExcelUtilities.getRowAndCellAddressForString(rowsFromSheet, field.getName());
+              if (rowAndCellAddressForString.isPresent()) {
+                return true;
+              } else {
+                return annotationClass != null && field.isAnnotationPresent(annotationClass);
+              }
+            })
+        .toList();
   }
 
   private <T> List<T> mapToObject(List<Map<String, Object>> list, Class<T> clazz, ObjectMapper mapper) {

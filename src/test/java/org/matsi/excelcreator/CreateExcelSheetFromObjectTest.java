@@ -1,7 +1,9 @@
 package org.matsi.excelcreator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.List;
@@ -27,6 +29,36 @@ public class CreateExcelSheetFromObjectTest {
     TestObject testObject = new TestObject("test", 1, "other", List.of("1", "2", "3", "4"));
 
     assertEquals(testObjects.getValue().getFirst(), testObject);
+
+  }
+
+  @Test
+  public void checkObjectAgainstExcelWithAnnotations() throws IOException {
+
+    var sheets = new ExcelReader().getSheets(FileReader.readFromFile("TestObjectWithAnnotations.xlsx"));
+
+    Map<String, List<TestObject>> mapOfTestObjectFromExcel = sheets.stream()
+        .collect(Collectors.toMap(XSSFSheet::getSheetName,
+                                  v -> new CreateDataObjectFromExcel().createListOfObjectsFromExcelSheet(TestObject.class, v)));
+
+    Entry<String, List<TestObject>> testObjects = mapOfTestObjectFromExcel.entrySet().stream().toList().getFirst();
+
+
+    TestObject testObject = new TestObject.TestObjectBuilder().number(1).name("test").build();
+
+    assertEquals(testObject, testObjects.getValue().getFirst());
+
+    testObject = new TestObject("test", 1, "other", List.of("1", "2", "3", "4"));
+
+    assertNotEquals(testObject,testObjects.getValue().getFirst());
+
+    mapOfTestObjectFromExcel = sheets.stream()
+        .collect(Collectors.toMap(XSSFSheet::getSheetName,
+                                  v -> new CreateDataObjectFromExcel().createListOfObjectsFromExcelSheet(TestObject.class, JsonAlias.class, v)));
+
+    testObjects = mapOfTestObjectFromExcel.entrySet().stream().toList().getFirst();
+
+    assertEquals(testObject, testObjects.getValue().getFirst());
 
   }
 
