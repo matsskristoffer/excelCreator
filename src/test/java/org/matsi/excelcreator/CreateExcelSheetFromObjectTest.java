@@ -60,6 +60,24 @@ public class CreateExcelSheetFromObjectTest {
 
     assertEquals(testObject, testObjects.getValue().getFirst());
 
+    sheets = new ExcelReader().getSheets(FileReader.readFromFile("TestObjectWithAnnotations2.xlsx"));
+
+    Map<String, List<TestObject2>> mapOfTestObjectFromExcel2 = sheets.stream()
+        .collect(Collectors.toMap(XSSFSheet::getSheetName,
+                                  v -> new CreateDataObjectFromExcel().createListOfObjectsFromExcelSheet(TestObject2.class, JsonAlias.class, v)));
+
+
+    Entry<String, List<TestObject2>> testObjects2 = mapOfTestObjectFromExcel2.entrySet().stream().toList().getFirst();
+
+    TestObject2 testObject2 = new TestObject2.TestObject2Builder()
+        .arrayOfStrings(List.of("1","2","3","4"))
+        .number(1)
+        .name("test")
+        .otherThings("other")
+        .build();
+
+    assertEquals(testObject2, testObjects2.getValue().getFirst());
+
   }
 
   @Test
