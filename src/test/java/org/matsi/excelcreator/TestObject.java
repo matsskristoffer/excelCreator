@@ -1,5 +1,6 @@
 package org.matsi.excelcreator;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +17,9 @@ public class TestObject {
 
   private String name;
   private int number;
+  @JsonAlias("other Things")
   private String otherThings;
+  @JsonAlias("array Of Strings")
   private List<String> arrayOfStrings;
 
 }

@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -108,6 +109,24 @@ public class Reflection {
     return Enum.valueOf((Class<T>) type, name);
   }
 
+  public static <T> T getObject(Class<T> clazz,
+      List<Field> fields,
+      Map<String, Object> objectMap) {
+
+    Object object = newInstanceOf(clazz);
+
+    for (Field field : fields) {
+      setFieldData(field, object, objectMap.get(field.getName()));
+    }
+
+    try {
+      return clazz.cast(object);
+    } catch (ClassCastException classCastException) {
+      throw new IllegalArgumentException(classCastException);
+    }
+
+  }
+
   public static <T> T newInstanceOf(Class<T> type) {
     return newInstanceOf(type, null, null);
   }
@@ -122,7 +141,7 @@ public class Reflection {
       Constructor<?>[] constructors = type.getDeclaredConstructors();
 
       if (Arrays.stream(constructors).toList().isEmpty()) {
-        throw new IllegalStateException("Couldn't find any constructors");
+        throw new IllegalStateException("Couldn't find any constructors, for class: " + type);
       }
       // Couldn't create instance, maybe use value instead.
       Optional<Constructor<?>> constructorWithOneArgument = Arrays.stream(constructors).filter(s -> s.getParameterCount() == 1).findFirst();

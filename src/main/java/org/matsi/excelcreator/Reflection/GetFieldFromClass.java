@@ -18,7 +18,11 @@ public class GetFieldFromClass {
   List<Field> fields;
 
   public GetFieldFromClass(Class<?> clazz) {
-    this(clazz, null);
+    this(clazz, null, null);
+  }
+
+  public GetFieldFromClass(Class<?> clazz, Class<? extends Annotation> annotationClazz) {
+    this(clazz, annotationClazz, null);
   }
 
   /**
@@ -26,14 +30,20 @@ public class GetFieldFromClass {
    *
    * @param clazz generic class
    */
-  public GetFieldFromClass(Class<?> clazz, List<String> skipFields) {
+  public GetFieldFromClass(Class<?> clazz,
+      Class<? extends Annotation> annotationClazz,
+      List<String> skipFields) {
     this.clazz = clazz;
+
     if (skipFields != null && !skipFields.isEmpty()) {
       this.skipFields = skipFields;
     }
 
-    fields = getDeclaredFieldsFromClass();
-
+    if (annotationClazz == null) {
+      fields = getDeclaredFieldsFromClass();
+    } else {
+      fields = getStringsFromFieldNameOrAnnotationClass(annotationClazz);
+    }
   }
 
 
