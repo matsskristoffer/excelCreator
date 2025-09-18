@@ -1,13 +1,13 @@
 package org.matsi.excelcreator;
 
 import static org.matsi.excelcreator.ExcelUtilities.getRowOfDataAsStrings;
+import static org.matsi.excelcreator.Reflection.Reflection.getObject;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.lang.reflect.Constructor;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,27 +16,40 @@ import java.util.Optional;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.matsi.excelcreator.ExcelUtilities.RowAndCellAddress;
 import org.matsi.excelcreator.Reflection.GetFieldFromClass;
-import org.matsi.excelcreator.Reflection.Reflection;
 
 public class CreateDataObjectFromExcel {
 
-
-  public <T> List<T> createListOfObjectsFromExcelSheet(final Class<T> clazz, final XSSFSheet sheet) {
+  public <T> List<T> createListOfObjectsFromExcelSheet(
+      Class<T> clazz,
+      final XSSFSheet sheet) {
 
     return createListOfObjectsFromExcelSheet(clazz,
+                                             null,
                                              sheet,
-                                             new GetFieldFromClass(clazz, null).getFields(),
                                              null);
-
   }
 
-  public <T> List<T> createListOfObjectsFromExcelSheet(final Class<T> clazz, final XSSFSheet sheet, List<Field> fields) {
+  public <T> List<T> createListOfObjectsFromExcelSheet(
+      Class<T> clazz,
+      Class<? extends Annotation> annotationClazz,
+      final XSSFSheet sheet) {
+
+    return createListOfObjectsFromExcelSheet(clazz,
+                                             annotationClazz,
+                                             sheet,
+                                             null);
+  }
+
+  public <T> List<T> createListOfObjectsFromExcelSheet(
+      Class<T> clazz,
+      Class<? extends Annotation> annotationClazz,
+      final XSSFSheet sheet,
+      ObjectMapper objectMapper) {
 
     return createListOfObjectsFromExcelSheet(clazz,
                                              sheet,
-                                             fields,
-                                             null);
-
+                                             new GetFieldFromClass(clazz, annotationClazz).getFields(),
+                                             objectMapper);
   }
 
 
@@ -81,7 +94,7 @@ public class CreateDataObjectFromExcel {
     }
   }
 
-  private static <T> List<T> mapToObject(List<Map<String, Object>> list, Class<T> clazz, ObjectMapper mapper) {
+  private <T> List<T> mapToObject(List<Map<String, Object>> list, Class<T> clazz, ObjectMapper mapper) {
 
     if (mapper == null) {
       mapper = new ObjectMapper();
@@ -112,32 +125,6 @@ public class CreateDataObjectFromExcel {
 
   }
 
-  private <T> T getObject(Class<T> clazz,
-      List<Field> fields,
-      Map<String, Object> objectMap) {
-
-    Constructor<?>[] declaredConstructors = clazz.getDeclaredConstructors();
-
-    // Will check for empty constructor which is required in order to create a new Instance.
-    if (Arrays.stream(declaredConstructors).noneMatch(s -> Arrays.stream(s.getParameterTypes()).toList().isEmpty())) {
-      throw new IllegalArgumentException("Cannot find empty constructor for class: " + clazz.getName());
-    } else {
-
-      Object object = Reflection.newInstanceOf(clazz);
-
-      for (Field field : fields) {
-        Reflection.setFieldData(field, object, objectMap.get(field.getName()));
-      }
-
-      try {
-        return clazz.cast(object);
-      } catch (ClassCastException classCastException) {
-        throw new IllegalArgumentException(classCastException);
-      }
-    }
-
-  }
-
   private Map<String, Object> getObjectMap(List<Field> fields,
       List<String> firstRowObject,
       List<String> fieldNamesFromExcel) {
@@ -156,7 +143,7 @@ public class CreateDataObjectFromExcel {
           && !Objects.equals(valueFromExcel, " ")) {
 
         fieldFromClass.get().setAccessible(true);
-        Object object = Reflection.getObject(fieldFromClass.get(), valueFromExcel);
+        Object object = getObject(fieldFromClass.get(), valueFromExcel);
         objectMap.put(fieldFromClass.get().getName(), object);
       } else {
         objectMap.put(fieldFromExcel, null);
