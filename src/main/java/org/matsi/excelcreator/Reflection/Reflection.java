@@ -158,13 +158,15 @@ public class Reflection {
         constructor.setAccessible(true);
         obj = constructor.newInstance();
         setFieldData(field, obj, value);
-      } else {
+      } else if (Arrays.stream(constructors).anyMatch(s -> s.getParameterCount() == 0)) {
         Constructor<T> constructor = type.getDeclaredConstructor();
         constructor.setAccessible(true);
         obj = constructor.newInstance();
+      } else {
+        throw new IllegalStateException("Couldn't find a constructor with a single argument or empty argument");
       }
     } catch (Exception ex) {
-      throw new IllegalStateException("Cannot create a new instance of " + type.getName(), ex);
+      throw new IllegalStateException("Cannot create a new instance of " + type.getName() + "\n" + ex.getMessage(), ex);
     }
 
     return obj;

@@ -63,22 +63,20 @@ public class CreateDataObjectFromExcel {
 
     List<String> fieldNames = fields.stream().map(Field::getName).toList();
 
-
     var rowsFromSheet = ExcelReader.getRowsFromSheet(sheet).stream().filter(Objects::nonNull).toList();
     var rowsWithData = getRowsWithData(rowsFromSheet, fieldNames);
 
+    List<Field> matchingFieldsInExcelWithoutAnnotation = getFieldsMatchingClassOrAnnotation(fields, rowsFromSheet);
 
-    List<Field> matchingFieldsInExcel = getFieldsMatchingClassOrAnnotation(annotationClazz, fields, rowsFromSheet);
-    final RowAndCellAddress rowAndCellAddressForIndexData = getRowAndCellAddress(rowsFromSheet,
-                                                                                 matchingFieldsInExcel, fieldNames);
+    final RowAndCellAddress rowAndCellAddressForIndexData = getRowAndCellAddress(rowsFromSheet, matchingFieldsInExcelWithoutAnnotation, fieldNames);
 
-    List<String> fieldNamesFromExcel = matchingFieldsInExcel.stream().map(Field::getName).toList();
+    List<Field> matchingFieldsInExcelWithAnnotation = getFieldsMatchingClassOrAnnotation(fields, rowsFromSheet, annotationClazz);
 
     if (mapper == null) {
 
       return rowsWithData.stream()
           .map(row -> getRowOfDataAsStrings(row, rowAndCellAddressForIndexData.row().getLastCellNum()))
-          .map(row -> getObjectMap(fields, row, fieldNamesFromExcel))
+          .map(row -> getObjectMap(fields, row, matchingFieldsInExcelWithAnnotation))
           .map(row -> getObject(clazz, fields, row))
           .filter(row -> row.getClass().isAssignableFrom(clazz))
           .map(clazz::cast)
@@ -88,7 +86,7 @@ public class CreateDataObjectFromExcel {
 
       return mapToObject(rowsWithData.stream()
                              .map(row -> getRowOfDataAsStrings(row, rowAndCellAddressForIndexData.row().getLastCellNum()))
-                             .map(row -> getObjectMap(fields, row, fieldNamesFromExcel))
+                             .map(row -> getObjectMap(fields, row, matchingFieldsInExcelWithAnnotation))
                              .toList(),
                          clazz,
                          mapper);
@@ -98,7 +96,8 @@ public class CreateDataObjectFromExcel {
   private static RowAndCellAddress getRowAndCellAddress(List<Row> rowsFromSheet, List<Field> matchingFieldsInExcel, List<String> fieldNames) {
     return ExcelUtilities
         .getRowAndCellAddressForString(rowsFromSheet, matchingFieldsInExcel.stream()
-            .filter(field -> fieldNames.contains(field.getName())).findFirst()
+            .filter(field -> fieldNames.contains(field.getName()))
+            .findFirst()
             .orElseThrow(() -> new IllegalStateException("Couldn't find a field matching from excel"))
             .getName())
         .orElseThrow(() -> new IllegalStateException("Missing last column for object from sheet"));
@@ -108,15 +107,23 @@ public class CreateDataObjectFromExcel {
     // Will sort out all rows that have a matching field
     // Will filter out rows that just have empty space.
     return rowsFromSheet.stream()
-        .filter(row -> fieldNames.stream().noneMatch(fieldName -> ExcelUtilities.getRowOfDataAsStrings(row, row.getLastCellNum()).contains(fieldName)))
+        .filter(
+            row -> fieldNames.stream().noneMatch(fieldName -> ExcelUtilities.getRowOfDataAsStrings(row, row.getLastCellNum()).contains(fieldName)))
         // Will filter out rows that just have empty space.
         .filter(s -> ExcelUtilities.getCellValuesFromRow(s).stream().noneMatch(string -> string == null || string.equals(" ")))
         .toList();
   }
 
-  private static List<Field> getFieldsMatchingClassOrAnnotation(Class<? extends Annotation> annotationClass,
+  private static List<Field> getFieldsMatchingClassOrAnnotation(
       List<Field> fields,
       List<Row> rowsFromSheet) {
+    return getFieldsMatchingClassOrAnnotation(fields, rowsFromSheet, null);
+  }
+
+  private static List<Field> getFieldsMatchingClassOrAnnotation(
+      List<Field> fields,
+      List<Row> rowsFromSheet,
+      Class<? extends Annotation> annotationClass) {
     return fields.stream().filter(
             field -> {
               Optional<RowAndCellAddress> rowAndCellAddressForString = ExcelUtilities.getRowAndCellAddressForString(rowsFromSheet, field.getName());
@@ -162,17 +169,17 @@ public class CreateDataObjectFromExcel {
 
   private Map<String, Object> getObjectMap(List<Field> fields,
       List<String> firstRowObject,
-      List<String> fieldNamesFromExcel) {
+      List<Field> fieldNamesFromExcel) {
     Map<String, Object> objectMap = new HashMap<>();
     // Will try to map the value against the object values
     int i = 0;
-    for (String fieldFromExcel : fieldNamesFromExcel.stream().filter(Objects::nonNull).toList()) {
+    for (Field fieldFromExcel : fieldNamesFromExcel.stream().filter(Objects::nonNull).toList()) {
       String valueFromExcel = " ";
       if (i < firstRowObject.size() - 1) {
         valueFromExcel = firstRowObject.get(i);
       }
 
-      Optional<Field> fieldFromClass = fields.stream().filter(s -> s.getName().equals(fieldFromExcel)).findFirst();
+      Optional<Field> fieldFromClass = fields.stream().filter(s -> s.getName().equals(fieldFromExcel.getName())).findFirst();
 
       if (fieldFromClass.isPresent()
           && !Objects.equals(valueFromExcel, " ")) {
@@ -181,7 +188,7 @@ public class CreateDataObjectFromExcel {
         Object object = getObject(fieldFromClass.get(), valueFromExcel);
         objectMap.put(fieldFromClass.get().getName(), object);
       } else {
-        objectMap.put(fieldFromExcel, null);
+        objectMap.put(fieldFromExcel.getName(), null);
       }
       i++;
     }
