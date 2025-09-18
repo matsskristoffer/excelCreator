@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.matsi</groupId>
-  <artifactId>excelCreator</artifactId>
+  <artifactId>excelcreator</artifactId>
   <version>0.1</version>
 
   <properties>
@@ -138,8 +138,14 @@
   <distributionManagement>
     <repository>
       <id>github</id>
+      <name>GitHub OWNER Apache Maven Packages</name>
       <url>https://maven.pkg.github.com/matsskristoffer/excelcreator</url>
     </repository>
+    <snapshotRepository>
+      <id>github</id>
+      <name>GitHub OWNER Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/matsskristoffer/excelcreator</url>
+    </snapshotRepository>
   </distributionManagement>
 
 </project>
