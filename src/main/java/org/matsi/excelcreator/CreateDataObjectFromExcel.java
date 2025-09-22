@@ -109,7 +109,8 @@ public class CreateDataObjectFromExcel {
           } else {
             if (annotationClass != null && field.isAnnotationPresent(annotationClass)
                 && Arrays.stream(field.getAnnotationsByType(annotationClass)).findFirst().isPresent()) {
-              map.put(field, new HasAnnotationAndWithValue(true, Reflection.getAnnotationValue(field, annotationClass)));
+              map.put(field, new HasAnnotationAndWithValue(true,
+                                                           Reflection.getAnnotationValue(field, annotationClass).orElse(field.getName())));
             }
           }
         });
