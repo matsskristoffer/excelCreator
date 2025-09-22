@@ -1,7 +1,5 @@
 package org.matsi.excelcreator;
 
-import static org.matsi.excelcreator.ExcelUtilities.returnStringFromCell;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -95,7 +93,7 @@ public class ExcelReader {
     return rows;
   }
 
-  private static boolean matchingSheet(List<Row> rows, String matchingString) {
+  private boolean matchingSheet(List<Row> rows, String matchingString) {
 
     Row firstRow = null;
     CellAddress cellAddress = null;
@@ -108,9 +106,7 @@ public class ExcelReader {
       Iterator<Cell> cellIterator = row.cellIterator();
       while (cellIterator.hasNext()) {
         Cell cell = cellIterator.next();
-        if (returnStringFromCell(cell).toLowerCase().contains(matchingString.toLowerCase())) {
-          // koncept/produkt was missing, so we match for this one, but we'll jump up one level to keep the same logic.
-          // check for index out of bounds
+        if (ExcelUtilities.returnStringFromCell(cell).toLowerCase().contains(matchingString.toLowerCase())) {
           cellAddress = new CellAddress(cell.getAddress().getRow(), cell.getColumnIndex());
           firstRow = row;
           break;
