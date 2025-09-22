@@ -19,7 +19,7 @@ import org.matsi.excelcreator.Reflection.GetFieldFromClass;
 
 public class ExcelUtilities {
 
-  protected ExcelUtilities() {
+  public ExcelUtilities() {
   }
 
   public List<String> getColumnOfData(List<Row> rows, CellAddress cellAddress, int jumpNumberOfColumns) {

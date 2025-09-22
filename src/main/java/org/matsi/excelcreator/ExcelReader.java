@@ -93,7 +93,7 @@ public class ExcelReader {
     return rows;
   }
 
-  private boolean matchingSheet(List<Row> rows, String matchingString) {
+  public boolean matchingSheet(List<Row> rows, String matchingString) {
 
     Row firstRow = null;
     CellAddress cellAddress = null;

@@ -229,13 +229,4 @@ public class CreateExcelSheetFromObject {
     }
   }
 
-//  private void createIndexColumns(Sheet sheet, List<String> fields, Row indexRow) {
-//    for (String fieldName : fields) {
-//      Cell cell = indexRow.createCell(fields.indexOf(fieldName));
-//      cell.setCellStyle(headerStyle);
-//      cell.setCellValue(fieldName);
-//      sheet.autoSizeColumn(fields.indexOf(fieldName));
-//    }
-//  }
-
 }
