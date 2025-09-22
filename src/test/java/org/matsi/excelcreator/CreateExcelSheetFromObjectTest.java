@@ -15,6 +15,8 @@ import org.junit.Test;
 
 public class CreateExcelSheetFromObjectTest {
 
+  ExcelUtilities excelUtilities = new ExcelUtilities();
+
   @Test
   public void checkObjectAgainstExcel() throws IOException {
 
@@ -60,6 +62,47 @@ public class CreateExcelSheetFromObjectTest {
 
     assertEquals(testObject, testObjects.getValue().getFirst());
 
+    sheets = new ExcelReader().getSheets(FileReader.readFromFile("TestObjectWithAnnotations2.xlsx"));
+
+    Map<String, List<TestObject2>> mapOfTestObjectFromExcel2 = sheets.stream()
+        .collect(Collectors.toMap(XSSFSheet::getSheetName,
+                                  v -> new CreateDataObjectFromExcel().createListOfObjectsFromExcelSheet(TestObject2.class, JsonAlias.class, v)));
+
+
+    Entry<String, List<TestObject2>> testObjects2 = mapOfTestObjectFromExcel2.entrySet().stream().toList().getFirst();
+
+    TestObject2 testObject2 = new TestObject2.TestObject2Builder()
+        .arrayOfStrings(List.of("1","2","3","4"))
+        .number(1)
+        .name("test")
+        .otherThings("other")
+        .build();
+
+    assertEquals(testObject2, testObjects2.getValue().getFirst());
+
+  }
+
+  @Test
+  public void tryWithOnlyAnnotationsTest() throws IOException{
+
+    List<XSSFSheet> sheets = new ExcelReader().getSheets(FileReader.readFromFile("TestObjectWithAnnotations3.xlsx"));
+
+    Map<String, List<TestObject3>> mapOfTestObjectFromExcel3 = sheets.stream()
+        .collect(Collectors.toMap(XSSFSheet::getSheetName,
+                                  v -> new CreateDataObjectFromExcel().createListOfObjectsFromExcelSheet(TestObject3.class, JsonAlias.class, v)));
+
+
+    Entry<String, List<TestObject3>> testObjects3 = mapOfTestObjectFromExcel3.entrySet().stream().toList().getFirst();
+
+    TestObject3 testObject3 = new TestObject3.TestObject3Builder()
+        .arrayOfStrings(List.of("1","2","3","4"))
+        .number(1)
+        .name("test")
+        .otherThings("other")
+        .build();
+
+    assertEquals(testObject3, testObjects3.getValue().getFirst());
+
   }
 
   @Test
@@ -76,8 +119,8 @@ public class CreateExcelSheetFromObjectTest {
 
     XSSFSheet helloFromExcel = sheets.getFirst();
 
-    assertEquals(ExcelUtilities.getRowOfDataAsStrings(helloFromExcel.getRow(1), 3),
-                 ExcelUtilities.getRowOfDataAsStrings(hello1.getRow(1), 3));
+    assertEquals(excelUtilities.getRowOfDataAsStrings(helloFromExcel.getRow(1), 3),
+                 excelUtilities.getRowOfDataAsStrings(hello1.getRow(1), 3));
 
     List<TestObject> mapOfTestObjectFromExcel =
         new CreateDataObjectFromExcel().createListOfObjectsFromExcelSheet(TestObject.class, hello.getXssfWorkbook().getSheetAt(0));

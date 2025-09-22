@@ -33,10 +33,10 @@ public class CreateExcelWithData {
       font.setBold(true);
       headerStyle.setFont(font);
 
-      AddExcelDataFromObject addExcelDataFromObject = new AddExcelDataFromObject(objectMapper, headerStyle);
+      CreateExcelSheetFromObject createExcelSheetFromObject = new CreateExcelSheetFromObject(objectMapper, headerStyle);
 
       // Loop through the mapper, each key represents one sheet.
-      listOfData.forEach((key, value) -> addExcelDataFromObject.addDataToSheet(value, workbook.createSheet(key)));
+      listOfData.forEach((key, value) -> createExcelSheetFromObject.addDataToSheet(value, workbook.createSheet(key)));
 
       workbook.write(byteArrayOutputStream);
 

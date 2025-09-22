@@ -19,10 +19,10 @@ import org.matsi.excelcreator.Reflection.GetFieldFromClass;
 
 public class ExcelUtilities {
 
-  private ExcelUtilities() {
+  protected ExcelUtilities() {
   }
 
-  public static List<String> getColumnOfData(List<Row> rows, CellAddress cellAddress, int jumpNumberOfColumns) {
+  public List<String> getColumnOfData(List<Row> rows, CellAddress cellAddress, int jumpNumberOfColumns) {
 
     List<Row> forwardJumpedRows = rows.stream().skip(cellAddress.getRow()).toList();
     Iterator<Row> rowIterator = forwardJumpedRows.iterator();
@@ -43,16 +43,16 @@ public class ExcelUtilities {
 
   }
 
-  public static boolean cellHasANonEmptyValue(Cell cell) {
+  public boolean cellHasANonEmptyValue(Cell cell) {
     return cell != null && !returnStringFromCell(cell).replace(" ", "").isEmpty();
   }
 
-  public static boolean isMappableToClass(List<XSSFSheet> xssfSheets, Class<?> clazz) {
+  public boolean isMappableToClass(List<XSSFSheet> xssfSheets, Class<?> clazz) {
     return isMappableToClass(xssfSheets, clazz, null);
   }
 
   // Could probably use equals to a predefined object, but this is quicker
-  public static boolean isMappableToClass(List<XSSFSheet> xssfSheets, Class<?> clazz, Class<? extends Annotation> annotationClass) {
+  public boolean isMappableToClass(List<XSSFSheet> xssfSheets, Class<?> clazz, Class<? extends Annotation> annotationClass) {
     boolean match = false;
 
     List<String> list = new GetFieldFromClass(clazz).getStringsFromFieldNameOrAnnotationClass(annotationClass).stream().map(Field::getName).toList();
@@ -77,11 +77,11 @@ public class ExcelUtilities {
 
   }
 
-  public static List<XSSFSheet> getMatchingSheetsFromClass(List<XSSFSheet> xssfSheets, Class<?> clazz) {
+  public List<XSSFSheet> getMatchingSheetsFromClass(List<XSSFSheet> xssfSheets, Class<?> clazz) {
     return getMatchingSheetsFromClass(xssfSheets, clazz, null);
   }
 
-  public static List<XSSFSheet> getMatchingSheetsFromClass(List<XSSFSheet> xssfSheets, Class<?> clazz, Class<? extends Annotation> annotationClass) {
+  public List<XSSFSheet> getMatchingSheetsFromClass(List<XSSFSheet> xssfSheets, Class<?> clazz, Class<? extends Annotation> annotationClass) {
     List<String> list = new GetFieldFromClass(clazz).getStringsFromFieldNameOrAnnotationClass(annotationClass).stream().map(Field::getName).toList();
 
     return xssfSheets.stream().filter(sheet -> ExcelReader.getRowsFromSheet(sheet).stream().filter(Objects::nonNull)
@@ -93,7 +93,7 @@ public class ExcelUtilities {
 
   }
 
-  public static List<Cell> getRowOfDataAsCells(Row row, int endColumnIndex) {
+  public List<Cell> getRowOfDataAsCells(Row row, int endColumnIndex) {
     List<Cell> data = new ArrayList<>();
     int i = 0;
 
@@ -104,7 +104,7 @@ public class ExcelUtilities {
     return data;
   }
 
-  public static List<String> getRowOfDataAsStrings(Row row, int endColumnIndex) {
+  public List<String> getRowOfDataAsStrings(Row row, int endColumnIndex) {
 
     List<String> data = new ArrayList<>();
     int i = 0;
@@ -117,7 +117,7 @@ public class ExcelUtilities {
     return data;
   }
 
-  public static CellAddress findColumnPosition(String key, Row indexRow, int size) {
+  public CellAddress findColumnPosition(String key, Row indexRow, int size) {
     Cell cell = null;
     int i = 0;
     while (cell == null
@@ -131,7 +131,7 @@ public class ExcelUtilities {
     return null;
   }
 
-  public static List<String> getRowOfDataAsStrings(List<Row> rows,
+  public List<String> getRowOfDataAsStrings(List<Row> rows,
       RowAndCellAddress rowAndCellStartAddress,
       int endColumnIndex) {
 
@@ -154,11 +154,11 @@ public class ExcelUtilities {
     return data;
   }
 
-  public static List<RowAndCellAddress> getRowAndCellAddressesForString(List<Row> rows, String matchingString) {
+  public List<RowAndCellAddress> getRowAndCellAddressesForString(List<Row> rows, String matchingString) {
     return getRowAndCellAddressesForString(rows, matchingString, false);
   }
 
-  public static List<RowAndCellAddress> getRowAndCellAddressesForString(List<Row> rows, String matchingString, boolean exactMatch) {
+  public List<RowAndCellAddress> getRowAndCellAddressesForString(List<Row> rows, String matchingString, boolean exactMatch) {
     List<Row> matchedRows = new ArrayList<>();
     List<CellAddress> cellAddresses = new ArrayList<>();
 
@@ -213,7 +213,7 @@ public class ExcelUtilities {
 
   }
 
-  public static List<String> getCellValuesFromRow(Row row) {
+  public List<String> getCellValuesFromRow(Row row) {
     List<String> values = new ArrayList<>();
     for (int i = 0; i < row.getLastCellNum(); i++) {
       values.add(getCellValue(row.getCell(i)));
@@ -221,7 +221,7 @@ public class ExcelUtilities {
     return values;
   }
 
-  public static String getCellValue(Cell cell) {
+  public String getCellValue(Cell cell) {
     if (cell != null) {
       return returnStringFromCell(cell);
     } else {

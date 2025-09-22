@@ -1,5 +1,6 @@
 package org.matsi.excelcreator.Reflection;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import org.apache.commons.lang3.StringUtils;
 
 public class Reflection {
 
@@ -48,6 +50,13 @@ public class Reflection {
       }
     }
     return null;
+  }
+
+  public static Optional<String> getAnnotationValue(Field field, Class<? extends Annotation> annotationClass) {
+    return Arrays.stream(field.getAnnotationsByType(annotationClass))
+        .findFirst()
+        .map(annotation -> StringUtils.substringBetween(annotation.toString(), "{", "}")
+                 .replace("\"", ""));
   }
 
   public static @Nullable Object getObjectFromListClass(Field field, String value) {
@@ -158,13 +167,15 @@ public class Reflection {
         constructor.setAccessible(true);
         obj = constructor.newInstance();
         setFieldData(field, obj, value);
-      } else {
+      } else if (Arrays.stream(constructors).anyMatch(s -> s.getParameterCount() == 0)) {
         Constructor<T> constructor = type.getDeclaredConstructor();
         constructor.setAccessible(true);
         obj = constructor.newInstance();
+      } else {
+        throw new IllegalStateException("Couldn't find a constructor with a single argument or empty argument");
       }
     } catch (Exception ex) {
-      throw new IllegalStateException("Cannot create a new instance of " + type.getName(), ex);
+      throw new IllegalStateException("Cannot create a new instance of " + type.getName() + "\n" + ex.getMessage(), ex);
     }
 
     return obj;
